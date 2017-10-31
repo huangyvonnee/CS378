@@ -1,0 +1,275 @@
+\documentclass[12pt]{article}
+
+\usepackage{amssymb}
+\usepackage{ifthen}
+\usepackage[table]{xcolor}
+\usepackage{minitoc}
+\usepackage{array}
+
+\definecolor{yellow}{cmyk}{0,0,1,0}
+\renewcommand{\arraystretch}{1.4}
+\newcommand{\R}{\mathbb{R}}
+
+\usepackage{colortbl}
+
+% Page size
+\setlength{\oddsidemargin}{-0.5in}
+\setlength{\evensidemargin}{-0.5in}
+\setlength{\textheight}{10.25in}
+\setlength{\textwidth}{7.0in}
+\setlength{\topmargin}{-1.35in}
+
+\renewcommand{\arraycolsep}{3pt}
+
+
+\input color_flatex
+
+\begin{document}
+\pagestyle{empty}
+
+
+\resetsteps % reset all definitions
+
+\resetsteps      % Reset all the commands to create a blank worksheet  
+
+% Define the operation to be computed
+
+\renewcommand{\operation}{ \left[ C \right] := \mbox{\sc syrk\_lt\_unb\_var2}( A, C ) }
+
+\renewcommand{\routinename}{\operation}
+
+% Step 1a: Precondition 
+
+\renewcommand{\precondition}{
+	C = \widehat{C}
+}
+
+% Step 1b: Postcondition 
+
+\renewcommand{\postcondition}{ 
+	C = A^TA + \widehat{C}
+}
+
+% Step 2: Invariant 
+% Note: Right-hand side of equalities must be updated appropriately
+
+\renewcommand{\invariant}{
+	\left(\begin{array}{c I c}
+		C_{TL} & C_{TR} \\ \whline 
+		C_{BL} & C_{BR}
+	\end{array}\right) =
+	\left(\begin{array}{c I c}
+		\widehat C_{TL} & \widehat C_{TR} \\ \whline
+		\widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+	\end{array}\right)
+}
+
+% Step 3: Loop-guard 
+
+\renewcommand{\guard}{
+	m( C_{BR} ) < m( C )
+}
+
+% Step 4: Initialize 
+
+\renewcommand{\partitionings}{
+	$
+	C \rightarrow
+	\left(\begin{array}{c I c} 
+	C_{TL} & C_{TR} \\ \whline
+	C_{BL} & C_{BR} 
+	\end{array}\right) 
+	$
+	,
+	$
+	A \rightarrow
+	\left(\begin{array}{c I c}
+	A_L & A_R
+	\end{array}\right)
+	$
+}
+
+\renewcommand{\partitionsizes}{
+	$ C_{BR} $ is $ 0 \times 0 $,
+	$ A_R $ has $ 0 $ columns
+}
+
+% Step 5a: Repartition the operands 
+
+\renewcommand{\repartitionings}{
+	$  \left(\begin{array}{c I c}
+	C_{TL} & C_{TR} \\ \whline 
+	C_{BL} & C_{BR}
+	\end{array}\right) 
+	\rightarrow
+	\left(\begin{array}{c c I c}
+	C_{00} & c_{01} & C_{02} \\  
+	c_{10}^T & \gamma_{11} & c_{12}^T \\ \whline 
+	C_{20} & c_{21} & C_{22}
+	\end{array}\right) 
+	$
+	,
+	$  \left(\begin{array}{c I c}
+	A_L & A_R
+	\end{array}\right)
+	\rightarrow
+	\left(\begin{array}{c c I c}
+	A_0 & a_1 & A_2
+	\end{array}\right)
+	$
+}
+
+\renewcommand{\repartitionsizes}{
+	$ \gamma_{11} $ is $ 1 \times 1 $,
+	$ a_1 $ has $ 1 $ column}
+
+% Step 5b: Move the double lines 
+
+\renewcommand{\moveboundaries}{
+	$  \left(\begin{array}{c I c}
+	C_{TL} & C_{TR} \\ \whline 
+	C_{BL} & C_{BR}
+	\end{array}\right) 
+	\leftarrow
+	\left(\begin{array}{c I c c}
+	C_{00} & c_{01} & C_{02} \\ \whline 
+	c_{10}^T & \gamma_{11} & c_{12}^T \\  
+	C_{20} & c_{21} & C_{22}
+	\end{array}\right) 
+	$
+	,
+	$  
+	\left(\begin{array}{c I c}
+	A_L & A_R
+	\end{array}\right)
+	\leftarrow
+	\left(\begin{array}{c I c c}
+	A_0 & a_1 & A_2
+	\end{array}\right)
+	$
+}
+
+% Step 6: State before update
+% Note: The below needs editing consistent with loop-invariant!!!
+
+\renewcommand{\beforeupdate}{
+	$  \left(\begin{array}{c c I c}
+	C_{00} & c_{01} & C_{02} \\  
+	c_{10}^T & \gamma_{11} & c_{12}^T \\ \whline 
+	C_{20} & c_{21} & C_{22}
+	\end{array}\right) =
+	\left(\begin{array}{c c I c}
+	\widehat C_{00} & \widehat c_{01} & \widehat C_{02} \\  
+	\widehat c_{10}^T & \widehat \gamma_{11} & \widehat c_{12}^T \\ \whline 
+	\widehat C_{20} & \widehat c_{21} & A_2^TA_2 + \widehat C_{22}
+	\end{array}\right)
+	$
+}
+
+
+% Step 7: State after update
+% Note: The below needs editing consistent with loop-invariant!!!
+
+\renewcommand{\afterupdate}{
+	$  \left(\begin{array}{c I c c}
+	C_{00} & c_{01} & C_{02} \\ \whline 
+	c_{10}^T & \gamma_{11} & c_{12}^T \\  
+	C_{20} & c_{21} & C_{22}
+	\end{array}\right) =	
+	\left(\begin{array}{c I c c}
+	C_{00} & c_{01} & C_{02} \\ \whline 
+	c_{10}^T & a_1^Ta_1 + \widehat \gamma_{11} & a_1^TA_2 + \widehat c_{21}^T \\ 
+	C_{20} & A_2^Ta_1 + \widehat c_{21} & A_2^TA_2 + \widehat C_{22}
+	\end{array}\right)
+	$
+}
+
+
+% Step 8: Insert the updates required to change the 
+%         state from that given in Step 6 to that given in Step 7
+% Note: The below needs editing!!!
+
+\renewcommand{\update}{
+	$
+	\begin{array}{l}          % do not delete this line 
+	\gamma_{11} := a_1^Ta_1 + \gamma_{11} \\ 
+	c_{21} := A_2^Ta_1 + c_{21} 
+	\end{array}               % do not delete this line 
+	$
+}
+
+
+
+\begin{center}
+	\FlaWorksheet
+\end{center}
+
+\newpage
+
+\begin{figure}[p]
+\begin{center}
+	\FlaWorksheetZero
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+	\FlaWorksheetOne
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+	\FlaWorksheetTwo
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+	\FlaWorksheetThree
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetFour
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetFive
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetSix
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetSeven
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetEight
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{center}
+	\FlaWorksheetNine
+\end{center}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+	\FlaAlgorithm
+\end{center}
+\end{figure}
+
+\end{document}

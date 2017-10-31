@@ -1,0 +1,340 @@
+\chapter{Symmetric rank-k update: $ C := A^TA + C $ \\
+	\large Team: Laurence Zhang, Yvonne Huang, Cindy Truong } 
+
+
+
+\section{Operation}
+
+Consider the operation
+\[
+C := A^TA +C 
+\]
+where $ A $ is a $ m \times m $ lower triangular matrix and $ C $ is a $ m \times m $ matrix.
+This is a special case of triangular 
+matrix-matrix multiplication, 
+with a matrix 
+being multiplied by its transpose on the left.
+We will refer to this operation
+as {\sc Syrk\_lt} where the {\sc lt} indicates the two matrices are
+\underline{t}ransposed and the matrix being updated is stored in the 
+\underline{l}ower triangular part.
+
+
+\section{Precondition and postcondition}
+
+In the precondition 
+\[
+C = \widehat C
+\]
+$ \widehat C $ denotes the original contents of $ C $.
+This allows us to express the state upon completion, the postcondition, as
+\[
+C = A^TA + \widehat C.
+\]
+It is implicitly assumed that $ C $ is a symmetric matrix.
+\section{Partitioned Matrix Expressions and loop invariants}
+
+There is one PME for this operation.
+
+\subsection{PME}
+
+To derive the PME, partition
+\[
+C \rightarrow
+\left(\begin{array}{c I c}
+C_{TL} & C_{BL}^T \\ \whline
+C_{BL} & C_{BR}
+\end{array}\right)
+,
+	\quad \mbox{and} \quad
+A \rightarrow \left(\begin{array}{c I c}
+A_L & A_R 
+\end{array}\right)
+\]
+Substituting these into the postcondition
+yields
+\[
+\left(\begin{array}{c I c}
+C_{TL} & C_{BL}^T \\ \whline
+C_{BL} & C_{BR}
+\end{array}\right)
+=
+\left(\begin{array}{c}
+A_L^T \\ \whline
+A_R^T
+\end{array}\right)
+\left(\begin{array}{c I c}
+A_L & A_R 
+\end{array}\right)
++
+\left(\begin{array}{c I c}
+\widehat C_{TL} &  C_{BL}^T \\ \whline
+\widehat C_{BL} & \widehat C_{BR}
+\end{array}\right)
+\]
+or, equivalently,
+\[
+\left(\begin{array}{c I c}
+C_{TL} & C_{BL}^T \\ \whline
+C_{BL} & C_{BR}
+\end{array}\right)
+=
+\left(\begin{array}{c I c}
+A_L^TA_L + \widehat C_{TL} & A_L^TA_R +  C_{BL}^T \\ \whline
+A_R^TA_L + \widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+\end{array}\right)
+\]
+\\
+From this, we can choose four loop invariants:
+\begin{description}
+	\item
+	{\bf Invariant 1:}
+	$
+	\left(\begin{array}{c I c}
+	C_{TL} & C_{BL}^T \\ \whline
+	C_{BL} & C_{BR}
+	\end{array}\right)
+	 = 
+	 \left(\begin{array}{c I c}
+	 A_L^TA_L + \widehat C_{TL} &  C_{BL}^T \\ \whline
+	 \widehat C_{BL} & \widehat C_{BR}
+	 \end{array}\right)
+	$. \\
+	(The top left part has been left alone and the rest have been partially computed).
+	\item
+	{\bf Invariant 2:}
+	$
+	\left(\begin{array}{c I c}
+	C_{TL} & C_{BL}^T \\ \whline
+	C_{BL} & C_{BR}
+	\end{array}\right)
+	= 
+	\left(\begin{array}{c I c}
+	\widehat C_{TL} &  C_{BL}^T \\ \whline
+	\widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+	\end{array}\right)
+	$. \\
+	(The bottom right part has been left alone and the rest have been partially computed).
+	\item
+	{\bf Invariant 3:}
+	$
+	\left(\begin{array}{c I c}
+	C_{TL} & C_{BL}^T \\ \whline
+	C_{BL} & C_{BR}
+	\end{array}\right)
+	= 
+	\left(\begin{array}{c I c}
+	A_L^TA_L + \widehat C_{TL} &  C_{BL}^T \\ \whline
+	A_R^TA_L + \widehat C_{BL} & \widehat C_{BR}
+	\end{array}\right)
+	$. \\
+	(The left part has been left alone and the right part has been partially computed).
+	\item
+	{\bf Invariant 4:}
+	$
+	\left(\begin{array}{c I c}
+	C_{TL} & C_{BL}^T \\ \whline
+	C_{BL} & C_{BR}
+	\end{array}\right)
+	= 
+	\left(\begin{array}{c I c}
+	\widehat C_{TL} &  C_{BL}^T \\ \whline
+	A_R^TA_L + \widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+	\end{array}\right)
+	$. \\
+	(The bottom part has been left alone and the top part has been partially computed).
+\end{description}
+
+\subsection{Notes}
+
+How do I decide to partition the matrices in the postcondition?
+
+\begin{itemize}
+	\item
+	Pick a matrix (operand), any matrix.  
+	\item 
+	If that matrix has 
+	\begin{itemize}
+		\item 
+	a triangular structure (in storage), then you want to either partition is into four quadrants, or not at all.  Symmetric matrices and triangular matrices have a triangular structure (in storage).
+		\item
+	no particular structure, then you partition it vertically (left-right), horizontally (top-bottom), or not at all.
+	\end{itemize}
+	\item
+	Next, partition the other matrices similarly, but conformally (meaning the 
+	resulting multiplications with the parts are legal).
+\end{itemize}
+Take our problem here:  $ C := A^TA + C $.
+Start by partitioning $ A $ horizontally:
+\[
+\left(\begin{array}{c I c}
+A_L & A_R 
+\end{array}\right)
+\]
+
+Then, the transpose of $A$ will give us:
+\[
+\left(\begin{array}{c}
+A_L^T \\ \whline
+A_R^T
+\end{array}\right)
+\]
+
+which is easier to express as a matrix partitioned vertically. The postcondition will now look like:  
+\[
+C
+=
+\left(\begin{array}{c}
+A_L^T \\ \whline
+A_R^T
+\end{array}\right)
+\left(\begin{array}{c I c}
+A_L & A_R 
+\end{array}\right)
++
+\widehat C
+\]
+\\
+Now, the way partitioned matrix multiplication works, $A$ would yield a matrix partitioned into quadrants:
+\[
+C = 
+\begin{array}[t]{c}
+\underbrace{
+\left(\begin{array}{c}
+A_L^T \\ \whline
+A_R^T
+\end{array}\right)
+\left(\begin{array}{c I c}
+A_L & A_R 
+\end{array}\right)
+	}\\
+	\left(\begin{array}{c I c}
+	A_L^TA_L & A_L^TA_R \\ \whline
+	A_R^TA_L & A_R^TA_R
+	\end{array}\right)
+	\end{array}
++ \widehat C
+\]
+So, we need to also partition $ C $ into quadrants:
+\[
+\left(\begin{array}{c I c}
+C_{TL} & C_{BL}^T \\ \whline
+C_{BL} & C_{BR}
+\end{array}\right)
+=
+\left(\begin{array}{c I c}
+A_L^TA_L & A_L^TA_R \\ \whline
+A_R^TA_L & A_R^TA_R
+\end{array}\right)
++
+\left(\begin{array}{c I c}
+\widehat C_{TL} &  C_{BL}^T \\ \whline
+\widehat C_{BL} & \widehat C_{BR}
+\end{array}\right)
+\] 
+
+\section{Deriving all unblocked algorithms}
+
+The below table summarizes all loop invariants, with links to all files related to this operation.
+
+The worksheet and code skeletons were genered using 
+ the \href{http://edx-org-utaustinx.s3.amazonaws.com/UT1401x/LAFFPfC/Spark/index.html}{\ding{42} Spark webpage}.
+ 
+
+\begin{center}
+	\begin{tabular}{| c | l I c | l |} \hline
+		& Invariant & Derivations &Implementations \\ \whline
+		1 & 
+		$ 
+		\left(\begin{array}{c I c}
+		C_{TL} & C_{BL}^T \\ \whline
+		C_{BL} & C_{BR}
+		\end{array}\right)
+		= 
+		\left(\begin{array}{c I c}
+		A_L^TA_L + \widehat C_{TL} &  C_{BL}^T \\ \whline
+		\widehat C_{BL} & \widehat C_{BR}
+		\end{array}\right)
+		$
+		&
+		\href{syrk_lt/Derivations/syrk_lt_unb_var1.pdf}
+		{PDF}
+		&
+		\begin{minipage}{0.3\textwidth}
+		\href{syrk_lt/flameatlab/syrk_lt_unb_var1.mlx}
+		{syrk\_lt\_unb\_var1.mlx}\\
+		\href{syrk_lt/FLAMEC/syrk_lt_unb_var1/syrk_lt_unb_var1.c}
+		{syrk\_lt\_unb\_var1.c}
+	    \end{minipage}
+	    \\ \hline
+	    2 & 
+	    $
+	    \left(\begin{array}{c I c}
+	    C_{TL} & C_{BL}^T \\ \whline
+	    C_{BL} & C_{BR} 
+	    \end{array}\right)
+	    = 
+	    \left(\begin{array}{c I c}
+	    \widehat C_{TL} &  C_{BL}^T \\ \whline
+	    \widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+	    \end{array}\right)
+	    $
+	    &
+	    \href{syrk_lt/Derivations/syrk_lt_unb_var2.pdf}
+	    {PDF}
+	    &
+	    \begin{minipage}{0.3\textwidth}
+	    	\href{syrk_lt/flameatlab/syrk_lt_unb_var2.mlx}
+	    	{syrk\_lt\_unb\_var2.mlx}\\
+	    	\href{syrk_tl/FLAMEC/syrk_lt_unb_var2/syrk_lt_unb_var2.c}
+	    	{syrk\_lt\_unb\_var2.c}
+	    \end{minipage}
+	    \\ \hline
+	    3 & 
+	    $
+	    \left(\begin{array}{c I c}
+	    C_{TL} & C_{BL}^T \\ \whline
+	    C_{BL} & C_{BR}
+	    \end{array}\right)
+	    = 
+	    \left(\begin{array}{c I c}
+	    A_L^TA_L + \widehat C_{TL} &  C_{BL}^T \\ \whline
+	    A_R^TA_L + \widehat C_{BL} & \widehat C_{BR}
+	    \end{array}\right)
+	    $
+	    &
+	    \href{syrk_lt/Derivations/syrkt_lt_unb_var3.pdf}
+	    {PDF}
+	    &
+	    \begin{minipage}{0.3\textwidth}
+	    	\href{syrk_lt/flameatlab/syrk_lt_unb_var3.mlx}
+	    	{syrk\_lt\_unb\_var3.mlx}\\
+	    	\href{syrk_lt/FLAMEC/syrk_lt_unb_var3/syrk_lt_unb_var3.c}
+	    	{syrk\_lt\_unb\_var3.c}
+	    \end{minipage}
+	    \\ \hline
+	    4 & 
+	    $
+	    \left(\begin{array}{c I c}
+	    C_{TL} & C_{BL}^T \\ \whline
+	    C_{BL} & C_{BR}
+	    \end{array}\right)
+	    = 
+	    \left(\begin{array}{c I c}
+	    \widehat C_{TL} &  C_{BL}^T \\ \whline
+	    A_R^TA_L + \widehat C_{BL} & A_R^TA_R + \widehat C_{BR}
+	    \end{array}\right)
+	    $
+	    &
+	    \href{syrk_lt/Derivations/syrk_lt_unb_var4.pdf}
+	    {PDF}
+	    &
+	    \begin{minipage}{0.3\textwidth}
+	    	\href{syrk_lt/flameatlab/syrk_lt_unb_var4.mlx}
+	    	{syrk\_lt\_unb\_var4.mlx}\\
+	    	\href{syrk_lt/FLAMEC/syrk_lt_unb_var4/syrk_lt_unb_var4.c}
+	    	{syrk\_lt\_unb\_var4.c}
+	    \end{minipage}
+	    \\ \hline
+	\end{tabular}
+\end{center}
